@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./services/caddy/Caddyfile:/etc/caddy/Caddyfile          
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"    
+
+  db:
+    image: postgres
+    restart: always
+    hostname: localhost
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5      
+
+  app:
+    build: 
+      dockerfile: Dockerfile
+      context: .
+    ports:
+      - 8080:8080
+    volumes:
+      - ./app:/app  
+    command: >
+      make prepare-env dev         
+    depends_on:
+      - caddy
+      - db
